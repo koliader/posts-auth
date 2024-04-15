@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option go_package = "github.com/koliader/posts-auth.git/internal/pb";
+import "Entities.proto";
+service Auth {
+  rpc Register(RegisterReq) returns (AuthRes) {}
+  rpc Login(LoginReq) returns (AuthRes) {}
+  rpc ListUsers(Empty) returns (ListUsersReq) {}
+}
+
+message AuthRes {
+  string Token = 1;
+}
+
+message RegisterReq {
+  string Email = 1;
+  string Username = 2;
+  string Password = 3;
+}
+
+message LoginReq {
+  string Email = 1;
+  string Password = 2;
+}
+
+message ListUsersReq {
+  repeated UserEntity users = 1;
+}
