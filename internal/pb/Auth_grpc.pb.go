@@ -30,7 +30,7 @@ const (
 type AuthClient interface {
 	Register(ctx context.Context, in *RegisterReq, opts ...grpc.CallOption) (*AuthRes, error)
 	Login(ctx context.Context, in *LoginReq, opts ...grpc.CallOption) (*AuthRes, error)
-	ListUsers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListUsersReq, error)
+	ListUsers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListUsersRes, error)
 }
 
 type authClient struct {
@@ -59,8 +59,8 @@ func (c *authClient) Login(ctx context.Context, in *LoginReq, opts ...grpc.CallO
 	return out, nil
 }
 
-func (c *authClient) ListUsers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListUsersReq, error) {
-	out := new(ListUsersReq)
+func (c *authClient) ListUsers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListUsersRes, error) {
+	out := new(ListUsersRes)
 	err := c.cc.Invoke(ctx, Auth_ListUsers_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (c *authClient) ListUsers(ctx context.Context, in *Empty, opts ...grpc.Call
 type AuthServer interface {
 	Register(context.Context, *RegisterReq) (*AuthRes, error)
 	Login(context.Context, *LoginReq) (*AuthRes, error)
-	ListUsers(context.Context, *Empty) (*ListUsersReq, error)
+	ListUsers(context.Context, *Empty) (*ListUsersRes, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -88,7 +88,7 @@ func (UnimplementedAuthServer) Register(context.Context, *RegisterReq) (*AuthRes
 func (UnimplementedAuthServer) Login(context.Context, *LoginReq) (*AuthRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedAuthServer) ListUsers(context.Context, *Empty) (*ListUsersReq, error) {
+func (UnimplementedAuthServer) ListUsers(context.Context, *Empty) (*ListUsersRes, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListUsers not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}

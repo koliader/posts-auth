@@ -18,6 +18,8 @@ protoc:
 	proto/*.proto
 test:
 	go test -v -cover ./...
+evans:
+	 evans --host localhost --port 8081 -r repl
 server:
 	go run cmd/main.go
 .PHONY: protoc

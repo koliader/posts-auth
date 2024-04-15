@@ -5,7 +5,7 @@ import "Entities.proto";
 service Auth {
   rpc Register(RegisterReq) returns (AuthRes) {}
   rpc Login(LoginReq) returns (AuthRes) {}
-  rpc ListUsers(Empty) returns (ListUsersReq) {}
+  rpc ListUsers(Empty) returns (ListUsersRes) {}
 }
 
 message AuthRes {
@@ -23,6 +23,6 @@ message LoginReq {
   string Password = 2;
 }
 
-message ListUsersReq {
+message ListUsersRes {
   repeated UserEntity users = 1;
 }

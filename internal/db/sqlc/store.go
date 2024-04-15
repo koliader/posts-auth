@@ -24,10 +24,3 @@ func NewStore(connPool *pgxpool.Pool) Store {
 		config:   config,
 	}
 }
-
-// func NewStore(db *sql.DB) Store {
-// 	return Store{
-// 		db:      db,
-// 		Queries: New(db),
-// 	}
-// }
