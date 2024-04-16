@@ -3,13 +3,20 @@ package grpc_service
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	db "github.com/koliader/posts-auth.git/internal/db/sqlc"
 	"github.com/koliader/posts-auth.git/internal/pb"
 	"github.com/koliader/posts-auth.git/internal/util"
-	"github.com/lib/pq"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const (
+	userNotFound = "user not found"
+	authError    = "invalid login or password"
+)
+
+// * Register
 
 func (s *Server) Register(ctx context.Context, req *pb.RegisterReq) (*pb.AuthRes, error) {
 	hashedPassword, err := util.HashPassword(req.GetPassword())
@@ -24,13 +31,10 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterReq) (*pb.AuthRes
 	}
 	user, err := s.store.CreateUser(ctx, arg)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			switch pqErr.Code.Name() {
-			case "unique_violation":
-				return nil, errorResponse(codes.AlreadyExists, "username already exists")
-			}
+		if code := db.ErrorCode(err); code == db.UniqueViolation {
+			return nil, status.Errorf(codes.AlreadyExists, "user with this email is created")
 		}
-		return nil, status.Errorf(codes.Unimplemented, "failed to create user")
+		return nil, status.Errorf(codes.Unimplemented, "failed to create user: %v", err)
 	}
 
 	token, err := s.tokenMaker.CreateToken(user.Email, s.config.AccessTokenDuration)
@@ -43,6 +47,32 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterReq) (*pb.AuthRes
 	}
 	return res, nil
 }
+
+// * Login
+func (s *Server) Login(ctx context.Context, req *pb.LoginReq) (*pb.AuthRes, error) {
+	user, err := s.store.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, status.Errorf(codes.Unauthenticated, authError)
+		}
+		return nil, status.Errorf(codes.Unimplemented, "error to get user")
+	}
+	passwordIsEqual := util.CheckPassword(user.Password, req.Password)
+	if passwordIsEqual != nil {
+		return nil, status.Errorf(codes.Unauthenticated, authError)
+	}
+
+	token, err := s.tokenMaker.CreateToken(user.Email, s.config.AccessTokenDuration)
+	if err != nil {
+		return nil, status.Error(codes.Unimplemented, "error to sign token")
+	}
+	res := pb.AuthRes{
+		Token: token,
+	}
+	return &res, nil
+}
+
+// * List
 
 func (s *Server) ListUsers(ctx context.Context, req *pb.Empty) (*pb.ListUsersRes, error) {
 	var convertedUsers []*pb.UserEntity
