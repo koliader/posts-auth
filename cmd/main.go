@@ -44,11 +44,13 @@ func runGrpcServer(config util.Config, store db.Store) {
 	if err != nil {
 		log.Fatal().Msg("cannot create server")
 	}
+	defer server.Close() // Закрыть соединение с RabbitMQ при завершении работы сервера
 
 	listener, err := net.Listen("tcp", config.ServerAddress)
 	if err != nil {
 		log.Fatal().Msg("cannot create listener")
 	}
+
 	// create logger
 	grpcLogger := grpc.UnaryInterceptor(grpc_service.GrpcLogger)
 	// create server

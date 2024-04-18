@@ -2,6 +2,7 @@ package grpc_service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	db "github.com/koliader/posts-auth.git/internal/db/sqlc"
@@ -87,4 +88,42 @@ func (s *Server) ListUsers(ctx context.Context, req *pb.Empty) (*pb.ListUsersRes
 		Users: convertedUsers,
 	}
 	return res, nil
+}
+
+func (s *Server) GetUserByEmail(ctx context.Context, req *pb.GetUserByEmailReq) (*pb.UserRes, error) {
+	user, err := s.store.GetUserByEmail(ctx, req.GetEmail())
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, errorResponse(codes.NotFound, userNotFound)
+		}
+		return nil, errorResponse(codes.Unimplemented, "error to get user")
+	}
+	res := pb.UserRes{
+		User: convertUser(user),
+	}
+	return &res, nil
+}
+
+func (s *Server) UpdateUserEmail(ctx context.Context, req *pb.UpdateUserEmailReq) (*pb.UserRes, error) {
+	arg := db.UpdateUserEmailParams{
+		Email:   req.Email,
+		Email_2: req.NewEmail,
+	}
+	user, err := s.store.UpdateUserEmail(ctx, arg)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, errorResponse(codes.NotFound, userNotFound)
+		}
+		return nil, errorResponse(codes.Unimplemented, "error to update user")
+	}
+
+	err = s.rbmClient.SendMessage("updateUserEmail", []byte(user.Email))
+	if err != nil {
+		return nil, errorResponse(codes.Internal, fmt.Sprintf("error sending RabbitMQ message: %v", err))
+	}
+
+	res := pb.UserRes{
+		User: convertUser(user),
+	}
+	return &res, nil
 }
