@@ -52,3 +52,16 @@ func TestListUsers(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, users)
 }
+
+func TestUpdateUserEmail(t *testing.T) {
+	user1 := createRandomUser(t)
+	arg := db.UpdateUserEmailParams{
+		Email:   user1.Email,
+		Email_2: util.RandomEmail(),
+	}
+	user2, err := testStore.UpdateUserEmail(context.Background(), arg)
+	require.NoError(t, err)
+	require.NotEmpty(t, user2)
+
+	require.Equal(t, arg.Email_2, user2.Email)
+}

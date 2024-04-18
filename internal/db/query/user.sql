@@ -13,3 +13,9 @@ WHERE email = $1;
 
 -- name: ListUsers :many
 SELECT * FROM users;
+
+-- name: UpdateUserEmail :one
+UPDATE users
+SET email = $2
+WHERE email = $1
+RETURNING *;

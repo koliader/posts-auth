@@ -67,3 +67,22 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	}
 	return items, nil
 }
+
+const updateUserEmail = `-- name: UpdateUserEmail :one
+UPDATE users
+SET email = $2
+WHERE email = $1
+RETURNING email, username, password
+`
+
+type UpdateUserEmailParams struct {
+	Email   string `json:"email"`
+	Email_2 string `json:"email_2"`
+}
+
+func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserEmail, arg.Email, arg.Email_2)
+	var i User
+	err := row.Scan(&i.Email, &i.Username, &i.Password)
+	return i, err
+}
