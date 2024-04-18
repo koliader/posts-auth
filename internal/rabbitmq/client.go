@@ -7,6 +7,11 @@ import (
 	"github.com/streadway/amqp"
 )
 
+type UpdateEmailMessage struct {
+	Email    string `json:"email"`
+	NewEmail string `json:"newEmail"`
+}
+
 type Client struct {
 	conn    *amqp.Connection
 	channel *amqp.Channel

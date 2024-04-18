@@ -2,11 +2,13 @@ package grpc_service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	db "github.com/koliader/posts-auth.git/internal/db/sqlc"
 	"github.com/koliader/posts-auth.git/internal/pb"
+	"github.com/koliader/posts-auth.git/internal/rabbitmq"
 	"github.com/koliader/posts-auth.git/internal/util"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -116,8 +118,16 @@ func (s *Server) UpdateUserEmail(ctx context.Context, req *pb.UpdateUserEmailReq
 		}
 		return nil, errorResponse(codes.Unimplemented, "error to update user")
 	}
+	message := rabbitmq.UpdateEmailMessage{
+		Email:    req.Email,
+		NewEmail: req.NewEmail,
+	}
+	messageBody, err := json.Marshal(message)
+	if err != nil {
+		return nil, errorResponse(codes.Internal, fmt.Sprintf("failed to serialize message: %v", err))
+	}
 
-	err = s.rbmClient.SendMessage("updateUserEmail", []byte(user.Email))
+	err = s.rbmClient.SendMessage("updateUserEmail", []byte(messageBody))
 	if err != nil {
 		return nil, errorResponse(codes.Internal, fmt.Sprintf("error sending RabbitMQ message: %v", err))
 	}
