@@ -107,6 +107,13 @@ func (s *Server) GetUserByEmail(ctx context.Context, req *pb.GetUserByEmailReq) 
 }
 
 func (s *Server) UpdateUserEmail(ctx context.Context, req *pb.UpdateUserEmailReq) (*pb.UserRes, error) {
+	payload, err := s.authorizeUser(ctx)
+	if err != nil {
+		return nil, unauthenticatedError(err)
+	}
+	if payload.Email != req.Email {
+		return nil, errorResponse(codes.PermissionDenied, "you can't change the email of another user")
+	}
 	arg := db.UpdateUserEmailParams{
 		Email:   req.Email,
 		Email_2: req.NewEmail,
