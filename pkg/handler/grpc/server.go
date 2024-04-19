@@ -6,16 +6,18 @@ import (
 	db "github.com/koliader/posts-auth.git/internal/db/sqlc"
 	"github.com/koliader/posts-auth.git/internal/pb"
 	"github.com/koliader/posts-auth.git/internal/rabbitmq"
+	redis_client "github.com/koliader/posts-auth.git/internal/redis"
 	"github.com/koliader/posts-auth.git/internal/token"
 	"github.com/koliader/posts-auth.git/internal/util"
 )
 
 type Server struct {
 	pb.UnimplementedAuthServer
-	config     util.Config
-	store      db.Store
-	tokenMaker token.Maker
-	rbmClient  rabbitmq.Client
+	config      util.Config
+	store       db.Store
+	tokenMaker  token.Maker
+	rbmClient   *rabbitmq.Client
+	redisClient *redis_client.Client
 }
 
 func NewServer(config util.Config, store db.Store) (*Server, error) {
@@ -29,11 +31,17 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 		return nil, fmt.Errorf("error creating rabbitmq client: %v", err)
 	}
 
+	redisClient, err := redis_client.NewRedis(config)
+	if err != nil {
+		return nil, fmt.Errorf("error to create redis client: %v", err)
+	}
+
 	server := &Server{
-		config:     config,
-		store:      store,
-		tokenMaker: tokenMaker,
-		rbmClient:  *rbmClient,
+		config:      config,
+		store:       store,
+		tokenMaker:  tokenMaker,
+		rbmClient:   rbmClient,
+		redisClient: redisClient,
 	}
 
 	return server, nil

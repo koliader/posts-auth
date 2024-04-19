@@ -12,3 +12,11 @@ func convertUser(user db.User) *pb.UserEntity {
 		Password: user.Password,
 	}
 }
+
+func convertUsers(users []db.User) []*pb.UserEntity {
+	var converted []*pb.UserEntity
+	for _, user := range users {
+		converted = append(converted, convertUser(user))
+	}
+	return converted
+}
