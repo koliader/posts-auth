@@ -41,18 +41,9 @@ func (s *Server) Register(ctx context.Context, req *pb.RegisterReq) (*pb.AuthRes
 		return nil, status.Errorf(codes.Unimplemented, "failed to create user: %v", err)
 	}
 
-	// * Get and set users to redis
-	users, err := s.store.ListUsers(context.Background())
+	err = s.redisClient.DeleteKey("users")
 	if err != nil {
-		return nil, errorResponse(codes.Internal, "error to list users")
-	}
-	jsonUsers, err := json.Marshal(users)
-	if err != nil {
-		return nil, errorResponse(codes.Internal, "error to marshal users")
-	}
-	err = s.redisClient.Set("users", jsonUsers)
-	if err != nil {
-		return nil, errorResponse(codes.Internal, fmt.Sprintf("error to set value to redis: %v", err))
+		return nil, errorResponse(codes.Internal, fmt.Sprintf("error to delete redis: %v", err))
 	}
 
 	// * Sign token
@@ -143,15 +134,12 @@ func (s *Server) GetUserByEmail(ctx context.Context, req *pb.GetUserByEmailReq) 
 }
 
 func (s *Server) UpdateUserEmail(ctx context.Context, req *pb.UpdateUserEmailReq) (*pb.UserRes, error) {
-	payload, err := s.authorizeUser(ctx)
+	email, err := s.authorizeUser(ctx)
 	if err != nil {
 		return nil, unauthenticatedError(err)
 	}
-	if payload.Email != req.Email {
-		return nil, errorResponse(codes.PermissionDenied, "you can't change the email of another user")
-	}
 	arg := db.UpdateUserEmailParams{
-		Email:   req.Email,
+		Email:   *email,
 		Email_2: req.NewEmail,
 	}
 	user, err := s.store.UpdateUserEmail(ctx, arg)
@@ -161,24 +149,10 @@ func (s *Server) UpdateUserEmail(ctx context.Context, req *pb.UpdateUserEmailReq
 		}
 		return nil, errorResponse(codes.Unimplemented, "error to update user")
 	}
-	// set users into redis after update
-	users, err := s.store.ListUsers(context.Background())
-	if err != nil {
-		return nil, status.Errorf(codes.Unimplemented, "failed to list users")
-	}
-	convertedUsers := convertUsers(users)
-	jsonStringUsers, err := json.Marshal(convertedUsers)
-	if err != nil {
-		return nil, errorResponse(codes.Internal, fmt.Sprintf("error to marshal users: %v", err))
-	}
-	err = s.redisClient.Set("users", jsonStringUsers)
-	if err != nil {
-		return nil, errorResponse(codes.Internal, fmt.Sprintf("error to set users into redis: %v", err))
-	}
 
 	// res
 	message := rabbitmq.UpdateEmailMessage{
-		Email:    req.Email,
+		Email:    *email,
 		NewEmail: req.NewEmail,
 	}
 	messageBody, err := json.Marshal(message)
@@ -189,6 +163,11 @@ func (s *Server) UpdateUserEmail(ctx context.Context, req *pb.UpdateUserEmailReq
 	err = s.rbmClient.SendMessage("updateUserEmail", []byte(messageBody))
 	if err != nil {
 		return nil, errorResponse(codes.Internal, fmt.Sprintf("error sending RabbitMQ message: %v", err))
+	}
+
+	err = s.redisClient.DeleteKey("users")
+	if err != nil {
+		return nil, errorResponse(codes.Internal, fmt.Sprintf("error to delete redis key: %v", err))
 	}
 
 	res := pb.UserRes{

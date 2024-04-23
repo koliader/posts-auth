@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/koliader/posts-auth.git/internal/token"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -14,7 +13,7 @@ const (
 	authBearer          = "bearer"
 )
 
-func (s *Server) authorizeUser(ctx context.Context) (*token.Payload, error) {
+func (s *Server) authorizeUser(ctx context.Context) (*string, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("missing metadata")
@@ -25,18 +24,10 @@ func (s *Server) authorizeUser(ctx context.Context) (*token.Payload, error) {
 	}
 	authHeader := values[0]
 	fields := strings.Fields(authHeader)
-	if len(fields) < 2 {
+	if len(fields) < 1 {
 		return nil, fmt.Errorf("invalid auth header format")
 	}
 
-	authType := strings.ToLower(fields[0])
-	if authType != authBearer {
-		return nil, fmt.Errorf("unsupported auth type: %s", authType)
-	}
-	accessToken := fields[1]
-	payload, err := s.tokenMaker.VerifyToken(accessToken)
-	if err != nil {
-		return nil, fmt.Errorf("invalid access token: %s", err)
-	}
-	return payload, nil
+	email := fields[0]
+	return &email, nil
 }

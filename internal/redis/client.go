@@ -43,3 +43,10 @@ func (c *Client) Get(key string) (value *string, err error) {
 	}
 	return &val, nil
 }
+func (c *Client) DeleteKey(key string) error {
+	err := c.client.Del(context.Background(), key).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
